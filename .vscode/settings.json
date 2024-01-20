@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "utilities.h": "c",
+        "test_cond.h": "c",
+        "test_mutex.h": "c",
+        "test_green.h": "c",
+        "test_futex.h": "c",
+        "bare_metal.h": "c",
+        "futex.h": "c"
+    }
+}

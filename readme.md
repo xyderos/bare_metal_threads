@@ -1,41 +1,13 @@
-## A simple project template for testing libraries in C using the LLVM toolset, Make and valgrind
+## Attempting to implement locks by the stdatomic library provided by C as well as the futex system calls
 
-* Have the LLVM toolchain installed eg __clangd__ for IDE extensions, __clang-format__ for formatting the document, __lldb-vscode__ for __spacemacs__ and __lldb__ as well as __clang-format__ extensions in __vscode__
+Some general observations:
 
-## Explanation by structure
+1) __Futexes are great!__ Can be used anywhere but are not portable, in case you want to implement something similar, you would probably use either __pthreads__ (which are still not fully portable) and slower since you would need to use an internal mutex and a condition variable to signal
 
-1) The pipeline
+2) __Spinlocks are a straightforward implementation that can be used 99% of the time__, although the majority of the time they are spining, meaning that they utilize the CPU more
 
-* There is a simple __CI/CD__ pipeline that initially sets a __DEPLOYMENT__ flag to development so we can get a comprehensive list of warnings in the pipeline
-* We also use __Valgrind__ for memory leaks or issues, as well as __check__ for unit testing
-* We need to export the __LD_LIBRARY_PATH__ in **BOTH** the local (your pc) and remote (the pipeline) enviroments (I am currently doing that manually per working directory)
-* Then we build with some production flags and finally deliver the library
+3) __Timedlocks are tricky__, based on benching them with various inputs from either number of threads, number of iterations and some timeouts, they really are case specific with a __big if__ on what concerns the performance improvement. __I guess the main concern is the thread contention__, when multiple threads are trying to acquire a timedlock, you will observe a lot of timeouts
 
-2) .vscode/
+4) __Sleeplocks__ in their simplest form (unlike futexes that the kernel is waking up a thread), do perform slower but they have reduced CPU cycles
 
-* We need this folder in order to tell lldb-vscode how to act when debugging
-* We use the __./vscode/jaunch.json__ to hook a launch process by invoking the __test__ recipe (which builds the __test__ executable to run the tests) from the __Makefile__ (more on that later)
-* We use the __./vscode/tasks.json__ to define the __build__ task which builds a __test executable__ with **development flags**
-
-3) The src directory
-
-* Each file shall have its __correposnding header__ and a __vice versa__ (I believe this logic gives a modern approach like C# or Java ehile it doesnt increase the actual complexity)
-* Go wild, the __build__ recipe will take care of the whole building process (more on that later)
-
-4) the tests directory
-
-* Declare a __START_TEST__ with a corresponding name within the arguments
-* Add the test case in the suite function by name
-
-5) The weird Makefile
-
-* Although the __makefile__ is structured in a weird way eg traversing all the files upon each build, which makes it not suitable for big projects, it does remind of an abstration and thus making it easier to extend it
-* It can distinguish the __production__ and __development__ env variables
-* __memory check__ with build the library, tests, run them and also generate a __Valgrind__ report  
-
-6) The LLVM part
-
-* There are a few solid configurations in order to boost your C++ knowledge by adding a lot of warnings and standards
-* Nice to use a formatter for the whole project
-
-Feel free to open a PR if you want to extend the template!
+5) __Trylocks__ are practically the basis of any other type of lock, one of the main issues is the __thread contention__ that is solved in the spinlocks by spinning to acquire and then lock. This makes things __messier on scalability__, meaning that they are not suitable for a big number of threads and a big number of iterations
